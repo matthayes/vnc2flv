@@ -8,9 +8,9 @@
 import sys, zlib, re
 from struct import pack, unpack
 try:
-    from cStringIO import StringIO
+    from io import StringIO
 except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
 from flvscreen import FlvScreen
 
 
@@ -28,14 +28,14 @@ def str2size(s):
     m = re.match(r'^(\d+)x(\d+)$', s)
     if not m:
         raise ValueError('Invalid size spec: %r' % s)
-    f = map(int, m.groups())
+    f = list(map(int, m.groups()))
     return (f[0],f[1])
 
 class MultipleRange(object):
 
     def __init__(self, s):
         self.ranges = []
-        if isinstance(s, basestring):
+        if isinstance(s, str):
             t = 0
             for x in s.split(','):
                 m = re.match(r'(\d+)?-(\d+)?', x)
@@ -48,7 +48,7 @@ class MultipleRange(object):
                 if m.group(2):
                     i2 = int(m.group(2))
                 else:
-                    i2 = sys.maxint
+                    i2 = sys.maxsize
                 self.ranges.append((t,i1,i2))
                 t += (i2-i1)
         elif isinstance(s, list):
@@ -66,7 +66,7 @@ class MultipleRange(object):
     def get_total(self, tmax):
         t = 0
         for (_,i1,i2) in self.ranges:
-            if i2 == sys.maxint:
+            if i2 == sys.maxsize:
                 i2 = tmax
             t += (i2-i1)
         return t
@@ -92,7 +92,7 @@ class VideoSink(object):
 
     def init_screen(self, width, height, name=None):
         if self.debug:
-            print >>sys.stderr, 'init_screen: %dx%d, name=%r' % (width, height, name)
+            print('init_screen: %dx%d, name=%r' % (width, height, name), file=sys.stderr)
         if self.clipping:
             ((xs,x), (ys,y), w, h) = self.clipping
             if xs == '-':
@@ -116,32 +116,36 @@ class VideoSink(object):
 
     def update_cursor_image(self, width, height, data):
         if self.debug:
-            print >>sys.stderr, 'update_cursor_image: %dx%d' % (width, height)
+            print('update_cursor_image: %dx%d' % (width, height), file=sys.stderr)
         return
 
     def update_cursor_pos(self, x, y):
         if self.debug:
-            print >>sys.stderr, 'update_cursor_pos: (%d,%d)' % (x,y)
+            print('update_cursor_pos: (%d,%d)' % (x,y), file=sys.stderr)
         return
 
-    def update_screen_rgbabits(self, (x, y), (width, height), data):
+    def update_screen_rgbabits(self, xxx_todo_changeme, xxx_todo_changeme1, data):
+        (x, y) = xxx_todo_changeme
+        (width, height) = xxx_todo_changeme1
         if self.debug:
-            print >>sys.stderr, 'update_screen_rgbabits: %dx%d at (%d,%d)' % (width,height,x,y)
+            print('update_screen_rgbabits: %dx%d at (%d,%d)' % (width,height,x,y), file=sys.stderr)
         return
 
-    def update_screen_solidrect(self, (x, y), (w, h), data):
+    def update_screen_solidrect(self, xxx_todo_changeme2, xxx_todo_changeme3, data):
+        (x, y) = xxx_todo_changeme2
+        (w, h) = xxx_todo_changeme3
         if self.debug:
-            print >>sys.stderr, 'update_screen_solidrect: %dx%d at (%d,%d), color=%r' % (width,height,x,y, color)
+            print('update_screen_solidrect: %dx%d at (%d,%d), color=%r' % (width,height,x,y, color), file=sys.stderr)
         return
 
     def flush(self, t):
         if self.debug:
-            print >>sys.stderr, 'flush', t
+            print('flush', t, file=sys.stderr)
         return
 
     def close(self):
         if self.debug:
-            print >>sys.stderr, 'close'
+            print('close', file=sys.stderr)
         return
 
 
@@ -181,11 +185,13 @@ class FLVVideoSink(VideoSink):
         else:
             self.windowsize = (bw, bh)
         if self.debug:
-            print >>sys.stderr, 'start: %d,%d (%dx%d)' % (x, y, width, height)
+            print('start: %d,%d (%dx%d)' % (x, y, width, height), file=sys.stderr)
         self.writer.set_screen_size(width, height)
         return (x, y, width, height)
 
-    def update_screen_rgbabits(self, (x, y), (w, h), data):
+    def update_screen_rgbabits(self, xxx_todo_changeme4, xxx_todo_changeme5, data):
+        (x, y) = xxx_todo_changeme4
+        (w, h) = xxx_todo_changeme5
         (x0,y0) = self.screenpos
         self.screen.blit_rgba(x-x0, y-y0, w, h, data)
         return
@@ -211,11 +217,11 @@ class FLVVideoSink(VideoSink):
         if key:
             # update the entire screen if necessary.
             self.windowpos = (bx,by)
-            changes = set( (bx+x,by+y) for y in xrange(bh) for x in xrange(bw) )
+            changes = set( (bx+x,by+y) for y in range(bh) for x in range(bw) )
         else:
             changes = set(changes)
         if self.debug:
-            print >>sys.stderr, 'update(%d): changes=%r' % (self.curframe, len(changes)), sorted(changes)
+            print('update(%d): changes=%r' % (self.curframe, len(changes)), sorted(changes), file=sys.stderr)
         flags = 3  # screenvideo codec
         if key:
             flags |= 0x10
@@ -227,9 +233,9 @@ class FLVVideoSink(VideoSink):
         data += chr((self.blocksize/16-1) << 4 | w >> 8) + chr(w & 0xff)
         data += chr((self.blocksize/16-1) << 4 | h >> 8) + chr(h & 0xff)
         n = 0
-        for y in xrange(bh, 0, -1):
+        for y in range(bh, 0, -1):
             y = by+y-1
-            for x in xrange(bw):
+            for x in range(bw):
                 x += bx
                 if (x,y) in changes:
                     # changed block
@@ -241,7 +247,8 @@ class FLVVideoSink(VideoSink):
         return data
 
     # do paning.
-    def do_autopan(self, (wx,wy), changes):
+    def do_autopan(self, xxx_todo_changeme6, changes):
+        (wx,wy) = xxx_todo_changeme6
         if changes:
             r = (min( x for (x,y) in changes ),
                  min( y for (x,y) in changes ),
@@ -310,8 +317,8 @@ class FLVMovieProcessor(object):
             videosink.init_screen(imagewidth, imageheight)
         fp = StringIO(data[5:])
         changed = []
-        for y in xrange(vblocks):
-            for x in xrange(hblocks):
+        for y in range(vblocks):
+            for x in range(hblocks):
                 (length,) = unpack('>H', fp.read(2))
                 if not length: continue
                 data = fp.read(length)
@@ -363,8 +370,8 @@ class FLVMovieProcessor(object):
 
 # main
 if __name__ == '__main__':
-    from flv import FLVWriter
-    from rfb import RFBNetworkClient
+    from .flv import FLVWriter
+    from .rfb import RFBNetworkClient
     fp = file('out.flv', 'wb')
     writer = FLVWriter(fp)
     sink = FLVVideoSink(writer, debug=1)

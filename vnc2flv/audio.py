@@ -8,9 +8,9 @@
 import sys
 from struct import pack, unpack
 try:
-    from cStringIO import StringIO
+    from io import StringIO
 except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
 
 
 ##  MP3Parser
@@ -41,7 +41,7 @@ def parse_mp3(fp, debug=0):
         if x.startswith('TAG'):
             # TAG - ignored
             data = x[3]+fp.read(128-4)
-            if debug: print >>sys.stderr, 'TAG', repr(data)
+            if debug: print('TAG', repr(data), file=sys.stderr)
             continue
         elif x.startswith('ID3'):
             # ID3 - ignored
@@ -50,19 +50,19 @@ def parse_mp3(fp, debug=0):
             s = [ ord(c) & 0x7f for c in fp.read(4) ]
             size = (s[0]<<21) | (s[1]<<14) | (s[2]<<7) | s[3]
             data = fp.read(size)
-            if debug: print >>sys.stderr, 'ID3', repr(data)
+            if debug: print('ID3', repr(data), file=sys.stderr)
             continue
         h = unpack('>L', x)[0]
         # All sync bits (b31-21) are set?
-        if (h & 0xffe00000L) != 0xffe00000L: continue
+        if (h & 0xffe00000) != 0xffe00000: continue
         # MPEG Audio Version ID (0:v2.5, 2:mpeg2, 3:mpeg1)
-        version = (h & 0x00180000L) >> 19
+        version = (h & 0x00180000) >> 19
         if version == 1: continue
         # Layer (1:layer1, 2:layer2, 3:mp3)
-        layer = 4 - ((h & 0x00060000L) >> 17)
+        layer = 4 - ((h & 0x00060000) >> 17)
         if layer == 4: continue
         # Protection (1: protected by CRC)
-        protected = not (h & 0x00010000L)
+        protected = not (h & 0x00010000)
         # Bitrate index
         b = (h & 0xf000) >> 12
         if b == 0 or b == 15: continue
@@ -101,8 +101,8 @@ def parse_mp3(fp, debug=0):
             # skip 16bit CRC
             fp.read(2)
         if debug:
-            print >>sys.stderr, 'Frame: bit_rate=%dk, sample_rate=%d, framesize=%d' % \
-                  (bit_rate, sample_rate, framesize)
+            print('Frame: bit_rate=%dk, sample_rate=%d, framesize=%d' % \
+                  (bit_rate, sample_rate, framesize), file=sys.stderr)
         data = x+fp.read(framesize-4)
         yield (nsamples, sample_rate, channels, data)
     return
@@ -140,7 +140,7 @@ class AudioSink(object):
             self.totalsamples += nsamples
         return
 
-    def get(self, start=0, end=sys.maxint):
+    def get(self, start=0, end=sys.maxsize):
         if not self.rate: return
         cursamples = int(self.rate * start / 1000.0)
         i0 = 0
@@ -169,7 +169,7 @@ class AudioSink(object):
             yield (t, nsamples, rate, stereo, data)
         return
 
-    def put(self, writer, start=0, end=sys.maxint, timestamp=0):
+    def put(self, writer, start=0, end=sys.maxsize, timestamp=0):
         if not self.rate: return 0
         totalsamples = 0
         for (t, nsamples, rate, stereo, data) in self.get(start, end):
@@ -184,5 +184,5 @@ class AudioSink(object):
 if __name__ == "__main__":
     fp = file(sys.argv[1], 'rb')
     for (nsamples,rate,channels,data) in parse_mp3(fp):
-        print (nsamples,rate,channels, len(data))
+        print((nsamples,rate,channels, len(data)))
     fp.close()

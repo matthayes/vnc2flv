@@ -57,8 +57,8 @@ def mp3add(srcfile, mp3files, outfile, force=False, debug=0):
 def main(argv):
     import getopt, vnc2flv
     def usage():
-        print argv[0], vnc2flv.__version__
-        print ('usage: %s [-d] [-f] input.flv [mp3:range ...] output.flv' % argv[0])
+        print(argv[0], vnc2flv.__version__)
+        print('usage: %s [-d] [-f] input.flv [mp3:range ...] output.flv' % argv[0])
         return 100
     try:
         (opts, args) = getopt.getopt(argv[1:], 'df')
@@ -74,8 +74,8 @@ def main(argv):
     outfile = args.pop(-1)
     try:
         mp3add(srcfile, args, outfile, force=force, debug=debug)
-    except IOError, e:
-        print >>sys.stderr, e
+    except IOError as e:
+        print(e, file=sys.stderr)
     return
 
 if __name__ == "__main__": sys.exit(main(sys.argv))

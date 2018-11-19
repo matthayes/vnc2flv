@@ -48,8 +48,8 @@ def flvcat(outfile, srcfiles,
 def main(argv):
     import getopt, vnc2flv
     def usage():
-        print argv[0], vnc2flv.__version__
-        print ('usage: %s [-d] [-f] [-r framerate] [-K keyframe]'
+        print(argv[0], vnc2flv.__version__)
+        print('usage: %s [-d] [-f] [-r framerate] [-K keyframe]'
                ' [-B blocksize] [-C clipping] [-W panwindow] [-S panspeed]'
                ' src1.flv src2.flv ... dest.flv' % argv[0])
         return 100
@@ -83,8 +83,8 @@ def main(argv):
                blocksize=blocksize, clipping=clipping,
                panwindow=panwindow, panspeed=panspeed,
                force=force, debug=debug)
-    except IOError, e:
-        print >>sys.stderr, e
+    except IOError as e:
+        print(e, file=sys.stderr)
     return
 
 if __name__ == "__main__": sys.exit(main(sys.argv))

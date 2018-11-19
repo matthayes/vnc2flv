@@ -10,13 +10,13 @@
 
 import sys, time, socket
 from struct import pack, unpack
-from d3des import decrypt_passwd, generate_response
+from .d3des import decrypt_passwd, generate_response
 
 
 def byte2bit(s):
-    return ''.join([ chr((ord(s[i>>3]) >> (7 - i&7)) & 1) for i in xrange(len(s)*8) ])
+    return ''.join([ chr((ord(s[i>>3]) >> (7 - i&7)) & 1) for i in range(len(s)*8) ])
 def str2bitmap(data, width, height, rowbytes):
-    return ''.join([ byte2bit(data[i*rowbytes:(i+1)*rowbytes])[:width] for i in xrange(height) ])
+    return ''.join([ byte2bit(data[i*rowbytes:(i+1)*rowbytes])[:width] for i in range(height) ])
 
 
 # Exceptions
@@ -87,7 +87,7 @@ class RFBProxy(object):
     def request_update(self):
         if not self.session_open: return
         if self.debug:
-            print >>sys.stderr, 'FrameBufferUpdateRequest'
+            print('FrameBufferUpdateRequest', file=sys.stderr)
         self.send('\x03\x01' + pack('>HHHH', *self.clipping))
         return
 
@@ -103,7 +103,7 @@ class RFBProxy(object):
             x = self._curbuf[:self._length]
             self._curbuf = self._curbuf[self._length:]
             if self.debug:
-                print >>sys.stderr, 'feed: state=%r, data=%r' % (self._state, x[:10])
+                print('feed: state=%r, data=%r' % (self._state, x[:10]), file=sys.stderr)
             (self._length, self._state) = self._state(x)
         return
 
@@ -124,7 +124,7 @@ class RFBProxy(object):
             self.protocol_version = 8
         self.send('RFB 003.%03d\x0a' % self.protocol_version)
         if self.debug:
-            print >>sys.stderr, 'protocol_version: 3.%d' % self.protocol_version
+            print('protocol_version: 3.%d' % self.protocol_version, file=sys.stderr)
         if self.protocol_version == 3:
             return self.auth3()
         else:
@@ -147,7 +147,7 @@ class RFBProxy(object):
     def auth3_1(self, data):
         (server_security,) = unpack('>L', data)
         if self.debug:
-            print >>sys.stderr, 'server_security: %r' % server_security
+            print('server_security: %r' % server_security, file=sys.stderr)
         # server_security might be 0, 1 or 2.
         if server_security == 0:
             return self.autherr()
@@ -165,7 +165,7 @@ class RFBProxy(object):
         return (nsecurities, self.auth7_2)
     def auth7_2(self, server_securities):
         if self.debug:
-            print >>sys.stderr, 'server_securities: %r' % server_securities
+            print('server_securities: %r' % server_securities, file=sys.stderr)
         # must include None or VNCAuth
         if '\x01' in server_securities:
             # None
@@ -189,13 +189,13 @@ class RFBProxy(object):
         return (16, self.crauth_1)
     def crauth_1(self, challange):
         if self.debug:
-            print >>sys.stderr, 'challange: %r' % challange
+            print('challange: %r' % challange, file=sys.stderr)
         if not self.pwdcache:
             raise RFBError('Auth cancelled')
         p = self.pwdcache.getpass()
         response = generate_response(p, challange)
         if self.debug:
-            print >>sys.stderr, 'response: %r' % response
+            print('response: %r' % response, file=sys.stderr)
         self.send(response)
         return (4, self.crauth_2)
     def crauth_2(self, data):
@@ -205,7 +205,7 @@ class RFBProxy(object):
     def authend(self, server_result):
         # result returned.
         if self.debug:
-            print >>sys.stderr, 'server_result: %r' % server_result
+            print('server_result: %r' % server_result, file=sys.stderr)
         if server_result != 0:
             # auth failed.
             if self.protocol_version != 3:
@@ -230,11 +230,11 @@ class RFBProxy(object):
          red_max, green_max, blue_max,
          red_shift, green_shift, blue_shift) = unpack('>BBBBHHHBBBxxx', self.pixelformat)
         if self.debug:
-            print >>sys.stderr, 'Server Encoding:'
-            print >>sys.stderr, ' width=%d, height=%d, name=%r' % (self.width, self.height, self.name)
-            print >>sys.stderr, ' pixelformat=', (bitsperpixel, depth, bigendian, truecolour)
-            print >>sys.stderr, ' rgbmax=', (red_max, green_max, blue_max)
-            print >>sys.stderr, ' rgbshift=', (red_shift, green_shift, blue_shift)
+            print('Server Encoding:', file=sys.stderr)
+            print(' width=%d, height=%d, name=%r' % (self.width, self.height, self.name), file=sys.stderr)
+            print(' pixelformat=', (bitsperpixel, depth, bigendian, truecolour), file=sys.stderr)
+            print(' rgbmax=', (red_max, green_max, blue_max), file=sys.stderr)
+            print(' rgbshift=', (red_shift, green_shift, blue_shift), file=sys.stderr)
         # setformat
         self.send('\x00\x00\x00\x00')
         # 32bit, 8bit-depth, big-endian(RGBX), truecolour, 255max
@@ -269,7 +269,7 @@ class RFBProxy(object):
         elif c == '\x02':
             # bell
             if self.debug:
-                print >>sys.stderr, 'Bell'
+                print('Bell', file=sys.stderr)
             return self.loop()
         elif c == '\x03':
             # cut-and-paste
@@ -285,7 +285,7 @@ class RFBProxy(object):
         return (length, self.cutnpaste_2)
     def cutnpaste_2(self, data):
         if self.debug:
-            print >>sys.stderr, 'ServerCutText: %r' % data
+            print('ServerCutText: %r' % data, file=sys.stderr)
         return self.loop()
 
     def cmap(self):
@@ -293,7 +293,7 @@ class RFBProxy(object):
     def cmap_1(self, data):
         (first, ncolours) = unpack('>xHH', data)
         if self.debug:
-            print >>sys.stderr, 'SetColourMapEntries: first=%d, ncolours=%d' % (first, ncolours)
+            print('SetColourMapEntries: first=%d, ncolours=%d' % (first, ncolours), file=sys.stderr)
         return (ncolours*6, self.cmap_2)
     def cmap_2(self, data):
         return self.loop()
@@ -307,7 +307,7 @@ class RFBProxy(object):
     def frame_1(self, data):
         (nrects,) = unpack('>xH', data)
         if self.debug:
-            print >>sys.stderr, 'FrameBufferUpdate: nrects=%d' % nrects
+            print('FrameBufferUpdate: nrects=%d' % nrects, file=sys.stderr)
         self.nrects = nrects
         return self.framerect()
     def framerect(self):
@@ -321,7 +321,7 @@ class RFBProxy(object):
         self.rectpos = (x, y)
         self.rectsize = (width, height)
         if self.debug:
-            print >>sys.stderr, ' %d x %d at (%d,%d), enc=%d' % (width, height, x, y, enc)
+            print(' %d x %d at (%d,%d), enc=%d' % (width, height, x, y, enc), file=sys.stderr)
         if enc == 0:
             # RawEncoding
             return self.encraw(width, height)
@@ -356,7 +356,7 @@ class RFBProxy(object):
         return (width*height*self.bytesperpixel, self.encraw_1)
     def encraw_1(self, data):
         if self.debug:
-            print >>sys.stderr, ' RawEncoding: received=%d' % (len(data))
+            print(' RawEncoding: received=%d' % (len(data)), file=sys.stderr)
         self.sink.update_screen_rgbabits(self.rectpos, self.rectsize, data)
         return self.framerect()
 
@@ -372,7 +372,7 @@ class RFBProxy(object):
         return (self.bytesperpixel, self.encrre_2)
     def encrre_2(self, bgcolor):
         if self.debug:
-            print >>sys.stderr, ' RREEncoding: subrects=%d, bgcolor=%r' % (self.nsubrects, bgcolor)
+            print(' RREEncoding: subrects=%d, bgcolor=%r' % (self.nsubrects, bgcolor), file=sys.stderr)
         self.sink.update_screen_solidrect(self.rectpos, self.rectsize, bgcolor)
         return self.encrre_subrect()
     def encrre_subrect(self):
@@ -385,7 +385,7 @@ class RFBProxy(object):
         fgcolor = self.recv(self.bytesperpixel)
         (x,y,w,h) = unpack('>HHHH', self.recv(8))
         if 2 <= self.debug:
-            print >>sys.stderr, ' RREEncoding: ', (x,y,w,h,fgcolor)
+            print(' RREEncoding: ', (x,y,w,h,fgcolor), file=sys.stderr)
         (x0,y0) = self.rectpos
         self.sink.update_screen_solidrect((x0+x, y0+y), (w, h), fgcolor)
         return self.encrre_subrect()
@@ -406,7 +406,7 @@ class RFBProxy(object):
         mask = data[n:]
         # Set the alpha channel with maskData where bit=1 -> alpha = 255, bit=0 -> alpha=255
         if self.debug:
-            print >>sys.stderr, 'RichCursor: %dx%d at %d,%d' % (width,height,x,y)
+            print('RichCursor: %dx%d at %d,%d' % (width,height,x,y), file=sys.stderr)
         image = self.sink.convert_pixels(image)
         mask = str2bitmap(mask, w, h, rowbytes)
         def conv1(i):
@@ -414,7 +414,7 @@ class RFBProxy(object):
                 return '\xff'+image[i]+image[i+1]+image[i+2]
             else:
                 return '\x00\x00\x00\x00'
-        bits = ''.join([ conv1(i) for i in xrange(0, len(image), 4) ])
+        bits = ''.join([ conv1(i) for i in range(0, len(image), 4) ])
         self.sink.update_cursor_image(width, height, bits)
         self.sink.update_cursor_pos(x, y)
         return
@@ -439,7 +439,7 @@ class RFBProxy(object):
         mask = data[6+n:]
         # Create the image from cursordata and maskdata.
         if self.debug:
-            print >>sys.stderr, 'XCursor: %dx%d at %d,%d' % (width,height,x,y)
+            print('XCursor: %dx%d at %d,%d' % (width,height,x,y), file=sys.stderr)
         shape = str2bitmap(shape, width, height, rowbytes)
         mask = str2bitmap(mask, width, height, rowbytes)
         def conv1(i):
@@ -450,14 +450,14 @@ class RFBProxy(object):
                     return '\xff'+bgcolor
             else:
                 return '\x00\x00\x00\x00'
-        bits = ''.join([ conv1(i) for i in xrange(len(shape)) ])
+        bits = ''.join([ conv1(i) for i in range(len(shape)) ])
         self.sink.update_cursor_image(width, height, bits)
         self.sink.update_cursor_pos(x, y)
         return
 
     def cursorpos(self, x, y):
         if self.debug:
-            print >>sys.stderr, 'CursorPos: %d,%d' % (x,y)
+            print('CursorPos: %d,%d' % (x,y), file=sys.stderr)
         self.sink.update_cursor_pos(x, y)
         return self.framerect()
 
@@ -482,7 +482,7 @@ class RFBNetworkClient(RFBProxy):
         self.sock.connect((self.host, self.port))
         self.sock.settimeout(self.timeout*.001)
         if self.debug:
-            print >>sys.stderr, 'Connected: %s:%d' % (self.host, self.port)
+            print('Connected: %s:%d' % (self.host, self.port), file=sys.stderr)
         return
 
     def idle(self):
@@ -506,7 +506,7 @@ class RFBNetworkClient(RFBProxy):
 
 # test
 if __name__ == '__main__':
-    from video import VideoSink
+    from .video import VideoSink
     sink = VideoSink()
     client = RFBNetworkClient('127.0.0.1', 5900, sink, debug=1)
     client.open()

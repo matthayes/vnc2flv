@@ -32,7 +32,7 @@ def flvrec(filename, host='localhost', port=5900,
                               pwdcache=pwdcache, preferred_encoding=preferred_encoding,
                               debug=debug)
     if verbose:
-        print >>sys.stderr, 'start recording'
+        print('start recording', file=sys.stderr)
     pid = 0
     if cmdline:
         pid = os.fork()
@@ -53,16 +53,16 @@ def flvrec(filename, host='localhost', port=5900,
             client.close()
     except KeyboardInterrupt:
         pass
-    except socket.error, e:
-        print >>sys.stderr, 'Socket error:', e
+    except socket.error as e:
+        print('Socket error:', e, file=sys.stderr)
         retval = 1
-    except RFBError, e:
-        print >>sys.stderr, 'RFB error:', e
+    except RFBError as e:
+        print('RFB error:', e, file=sys.stderr)
         retval = 1
     if pid:
         os.killpg(os.getpgid(pid), signal.SIGTERM)
     if verbose:
-        print >>sys.stderr, 'stop recording'
+        print('stop recording', file=sys.stderr)
     writer.close()
     fp.close()
     return retval
@@ -72,8 +72,8 @@ def flvrec(filename, host='localhost', port=5900,
 def main(argv):
     import getopt, vnc2flv
     def usage():
-        print argv[0], vnc2flv.__version__
-        print ('usage: %s [-d] [-q] [-o filename] [-r framerate] [-K keyframe]'
+        print(argv[0], vnc2flv.__version__)
+        print('usage: %s [-d] [-q] [-o filename] [-r framerate] [-K keyframe]'
                ' [-e vnc_encoding] [-P vnc_pwdfile] [-N]'
                ' [-B blocksize] [-C clipping] [-S subprocess]'
                ' [host[:display] [port]]' % argv[0])

@@ -13,15 +13,15 @@ from vnc2flv.video import MultipleRange, FLVVideoSink, FLVMovieProcessor
 
 ##  flvsplit
 ##
-def flvsplit(outbase, srcfile, 
+def flvsplit(outbase, srcfile,
              framerate=12, keyframe=120, blocksize=32,
-             duration=sys.maxint, overlap=0, nameformat='%s-%03d.flv',
+             duration=sys.maxsize, overlap=0, nameformat='%s-%03d.flv',
              force=False, debug=0):
     fin = file(srcfile, 'rb')
     parser = FLVParser(fin)
     totaldur = parser.get_duration()
     (_,_,totaldur,_,_) = parser[-1]
-    print >>sys.stderr, 'total duration: %d' % totaldur
+    print('total duration: %d' % totaldur, file=sys.stderr)
     t0 = 0
     i = 0
     while 1:
@@ -36,7 +36,7 @@ def flvsplit(outbase, srcfile,
         videosink = FLVVideoSink(writer, framerate=framerate, keyframe=keyframe,
                                  blocksize=blocksize, debug=debug)
         t1 = min(t0+duration, totaldur)
-        print >>sys.stderr, 'writing %r (%d-%d)...' % (outfile, t0, t1)
+        print('writing %r (%d-%d)...' % (outfile, t0, t1), file=sys.stderr)
         ranges = MultipleRange([(t0, t1)])
         processor.process_flv(parser, audiosink, videosink, ranges=ranges)
         writer.close()
@@ -53,8 +53,8 @@ def flvsplit(outbase, srcfile,
 def main(argv):
     import getopt, vnc2flv
     def usage():
-        print argv[0], vnc2flv.__version__
-        print ('usage: %s [-d] [-f] [-r framerate] [-K keyframe]'
+        print(argv[0], vnc2flv.__version__)
+        print('usage: %s [-d] [-f] [-r framerate] [-K keyframe]'
                ' [-B blocksize] [-D duration] [-P overlap] [-F nameformat]'
                ' src.flv destbase' % argv[0])
         return 100
@@ -87,8 +87,8 @@ def main(argv):
                  framerate=framerate, keyframe=keyframe, blocksize=blocksize,
                  duration=duration, overlap=overlap, nameformat=nameformat,
                  force=force, debug=debug)
-    except IOError, e:
-        print >>sys.stderr, e
+    except IOError as e:
+        print(e, file=sys.stderr)
     return
 
 if __name__ == "__main__": sys.exit(main(sys.argv))

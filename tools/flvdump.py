@@ -8,9 +8,9 @@
 import sys
 from vnc2flv.flv import FLVParser, getvalue
 try:
-    from cStringIO import StringIO
+    from io import StringIO
 except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
 from struct import unpack, error
 
 
@@ -42,7 +42,7 @@ def flvdump(fp, verbose=0, debug=0):
                 ch = 'mono'
             audio += 1
             if 1 <= verbose:
-                print ('%08d: audio: %s, rate=%d, %dbit, %s (%d bytes)' %
+                print('%08d: audio: %s, rate=%d, %dbit, %s (%d bytes)' %
                        (timestamp, atype, rate, samplesize, ch, length))
         elif tag == 9:
             # Video tag
@@ -61,36 +61,36 @@ def flvdump(fp, verbose=0, debug=0):
                     y = ord(buf.read(1))
                     blockheight = ((x >> 4)+1) * 16
                     imageheight = (x & 0xf) << 8 | y
-                    print ('%08d: video: %s/%s %dx%d (block:%dx%d) (%d bytes)' %
+                    print('%08d: video: %s/%s %dx%d (block:%dx%d) (%d bytes)' %
                            (timestamp, cname, ftype, imagewidth, imageheight,
                             blockwidth, blockheight, length))
                     if 2 <= verbose:
                         r = []
-                        for y in xrange((imageheight + blockheight-1)/blockheight):
-                            for x in xrange((imagewidth + blockwidth-1)/blockwidth):
+                        for y in range((imageheight + blockheight-1)/blockheight):
+                            for x in range((imagewidth + blockwidth-1)/blockwidth):
                                 (n,) = unpack('>H', buf.read(2))
                                 buf.read(n)
                                 r.append(n)
-                        print ' ',r
+                        print(' ',r)
                 else:
-                    print '%08d: video: %s/%s (%d bytes)' % (timestamp, cname, ftype, length)
+                    print('%08d: video: %s/%s (%d bytes)' % (timestamp, cname, ftype, length))
         elif tag == 18:
             # Data tag
-            print '%08d: data (%d bytes)' % (timestamp, length)
+            print('%08d: data (%d bytes)' % (timestamp, length))
             if 1 <= verbose:
                 (k,v) = parser.parse_metadata(data)
-                print '  %s: %r' % (k,v)
+                print('  %s: %r' % (k,v))
         else:
             other += 1
             if 1 <= verbose:
-                print ('%08d: tag %d (%d bytes)' % (timestamp, tag, length))
+                print('%08d: tag %d (%d bytes)' % (timestamp, tag, length))
         if 2 <= verbose:
             N = 16
-            for i in xrange(0, len(data), N):
+            for i in range(0, len(data), N):
                 line = data[i:i+N]
-                print '  %s: %r' % (' '.join( '%02x' % ord(c) for c in line ), line)
+                print('  %s: %r' % (' '.join( '%02x' % ord(c) for c in line ), line))
     parser.close()
-    print 'time=%.3f, video: %d, audio: %d, other: %d' % (timestamp*.001, video, audio, other)
+    print('time=%.3f, video: %d, audio: %d, other: %d' % (timestamp*.001, video, audio, other))
     return
 
 
@@ -98,8 +98,8 @@ def flvdump(fp, verbose=0, debug=0):
 def main(argv):
     import getopt, vnc2flv
     def usage():
-        print argv[0], vnc2flv.__version__
-        print ('usage: %s [-d] [-q] [-v] movie.flv' % argv[0])
+        print(argv[0], vnc2flv.__version__)
+        print('usage: %s [-d] [-q] [-v] movie.flv' % argv[0])
         return 100
     try:
         (opts, args) = getopt.getopt(argv[1:], 'dvq')
