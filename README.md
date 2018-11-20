@@ -2,7 +2,7 @@
 
 Desktop Screen Recorder for UNIX, Linux, Windows or Mac.
 
-This is an updated version of [vnc2flx](http://www.unixuser.org/~euske/python/vnc2flv/index.html) that works with
+This is an updated version of [vnc2flv](http://www.unixuser.org/~euske/python/vnc2flv/index.html) that works with
 Python 3.  This will not work with Python 2.
 
 To use it, clone the repo and then run:
