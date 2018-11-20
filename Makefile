@@ -11,7 +11,7 @@ CP=cp -f
 all:
 
 install:
-	$(PYTHON) setup.py install --home=$(HOME)
+	$(PYTHON) setup.py install
 
 clean:
 	-$(PYTHON) setup.py clean
@@ -44,4 +44,4 @@ recmp3:
 
 testflvscreen:
 	$(PYTHON) setup.py build
-	PYTHONPATH=build/lib.linux-i686-2.5 $(PYTHON) flvscreen/test.py
+	$(PYTHON) flvscreen/test.py

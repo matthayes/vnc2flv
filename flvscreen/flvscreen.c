@@ -101,7 +101,7 @@ FlvScreen_new(PyTypeObject* type, PyObject* args, PyObject* kwargs)
 static void
 FlvScreen_dealloc(PyFlvScreen* self)
 {
-    self->ob_type->tp_free((PyObject*) self);
+    Py_TYPE(self)->tp_free((PyObject*) self);
     if (self->blocks != NULL) {
 	PyMem_Free(self->blocks);
     }
@@ -130,19 +130,19 @@ FlvScreen_blit_rgba(PyFlvScreen* self, PyObject* args)
     }
 
     /* check the data type */
-    if (!PyString_CheckExact(data)) {
+    if (!PyBytes_CheckExact(data)) {
 	PyErr_SetString(PyExc_TypeError, "must be string");
 	return NULL;
     }
     /* check the data size */
-    if (PyString_Size(data) != pw*ph*sizeof(RGBAPixel)) {
+    if (PyBytes_Size(data) != pw*ph*sizeof(RGBAPixel)) {
 	PyErr_SetString(PyExc_FlvError, "invalid data size");
 	return NULL;
     }
 
     /* copy the image data */
     {
-	RGBAPixel* src = (RGBAPixel*)PyString_AsString(data);
+	RGBAPixel* src = (RGBAPixel*)PyBytes_AsString(data);
 	int bx0 = idiv(px, blk_size);
 	int bx1 = idiv(px+pw-1, blk_size);
 	for (; 0 < ph; ph--, py++, src += pw) {
@@ -211,7 +211,7 @@ FlvScreen_blit_rgba(PyFlvScreen* self, PyObject* args)
 	}
     }
 
-    return PyInt_FromLong(changes);
+    return PyLong_FromLong(changes);
 }
 
 
@@ -238,8 +238,8 @@ FlvScreen_changed(PyFlvScreen* self)
 		if (*blk != 0) {
 		    PyObject* tup = PyTuple_New(2);
 		    if (tup == NULL) return NULL;
-		    PyTuple_SetItem(tup, 0, PyInt_FromLong(x));
-		    PyTuple_SetItem(tup, 1, PyInt_FromLong(y));
+		    PyTuple_SetItem(tup, 0, PyLong_FromLong(x));
+		    PyTuple_SetItem(tup, 1, PyLong_FromLong(y));
 		    PyList_Append(result, tup);
 		    Py_DECREF(tup);
 		}
@@ -283,7 +283,7 @@ FlvScreen_get(PyFlvScreen* self, PyObject* args)
 		dst->blue = src->blue;
 	    }
 	}
-	result = PyString_FromStringAndSize((char*)self->tmppix, 
+	result = PyBytes_FromStringAndSize((char*)self->tmppix,
 					    self->blk_size * self->blk_size * sizeof(FLVPixel));
     }
 
@@ -308,11 +308,11 @@ FlvScreen_reset(PyFlvScreen* self)
 static PyObject*
 FlvScreen_dump(PyFlvScreen* self)
 {
-    fprintf(stderr, "PyFlvScreen: self=%p, pixels=%p (%dx%d), blk_size=%d, blocks=%p (%dx%d), tmppix=%p\n", 
-	    self, 
-	    self->pixels, self->pix_width, self->pix_height, 
+    fprintf(stderr, "PyFlvScreen: self=%p, pixels=%p (%dx%d), blk_size=%d, blocks=%p (%dx%d), tmppix=%p\n",
+	    self,
+	    self->pixels, self->pix_width, self->pix_height,
 	    self->blk_size,
-	    self->blocks, self->blk_width, self->blk_height, 
+	    self->blocks, self->blk_width, self->blk_height,
 	    self->tmppix);
     {
 	int y;
@@ -392,8 +392,7 @@ static PyMemberDef FlvScreen_members[] = {
 static char FlvScreen_doc[] = "FlvScreen";
 
 static PyTypeObject FlvScreen_type = {
-    PyObject_HEAD_INIT(NULL)
-    0,				/* ob_size */
+    PyVarObject_HEAD_INIT(NULL, 0)
     "flvscreen.FlvScreen",	/* tp_name */
     sizeof(PyFlvScreen),	/* tp_basicsize */
     0,				/* tp_itemsize */
@@ -447,18 +446,18 @@ FlvScreen_flv2rgba(PyObject* self, PyObject* args)
 	return NULL;
     }
     /* check the data type */
-    if (!PyString_CheckExact(data)) {
+    if (!PyBytes_CheckExact(data)) {
 	PyErr_SetString(PyExc_TypeError, "must be string");
 	return NULL;
     }
 
-    if (PyString_Size(data) != (width * height * sizeof(FLVPixel))) {
+    if (PyBytes_Size(data) != (width * height * sizeof(FLVPixel))) {
 	PyErr_SetString(PyExc_FlvError, "invalid data size");
 	return NULL;
     }
 
     {
-	FLVPixel* src = (FLVPixel*)PyString_AsString(data);
+	FLVPixel* src = (FLVPixel*)PyBytes_AsString(data);
 	RGBAPixel* tmp = (RGBAPixel*)PyMem_Malloc(width * height * sizeof(RGBAPixel));
 	int y;
 	if (tmp == NULL) return NULL;
@@ -472,7 +471,7 @@ FlvScreen_flv2rgba(PyObject* self, PyObject* args)
 		dst->alpha = 0;
 	    }
 	}
-	result = PyString_FromStringAndSize((char*)tmp, width * height * sizeof(RGBAPixel));
+	result = PyBytes_FromStringAndSize((char*)tmp, width * height * sizeof(RGBAPixel));
 	PyMem_Free(tmp);
     }
 
@@ -486,28 +485,41 @@ static PyMethodDef flvscreen_functions[] = {
     {NULL, NULL},
 };
 
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "flvscreen",         /* m_name */
+    "flvscreen",         /* m_doc */
+    -1,                  /* m_size */
+    flvscreen_functions, /* m_methods */
+    NULL,                /* m_reload */
+    NULL,                /* m_traverse */
+    NULL,                /* m_clear */
+    NULL,                /* m_free */
+};
+
 
 /* Module initialization */
 PyMODINIT_FUNC
-initflvscreen(void)
+PyInit_flvscreen(void)
 {
     PyObject* module;
     PyObject* dict;
 
-    if (PyType_Ready(&FlvScreen_type) < 0) return;
+    if (PyType_Ready(&FlvScreen_type) < 0) return NULL;
 
-    module = Py_InitModule3("flvscreen",
-			    flvscreen_functions,
-			    "flvscreen");
-    if (module == NULL) return;
+    module = PyModule_Create(&moduledef);
+    if (module == NULL) return NULL;
+
     dict = PyModule_GetDict(module);
-    if (dict == NULL) return;
+    if (dict == NULL) return NULL;
 
     Py_INCREF(&FlvScreen_type);
-    PyModule_AddObject(module, "FlvScreen", (PyObject*)&FlvScreen_type);
+    if (PyModule_AddObject(module, "FlvScreen", (PyObject*)&FlvScreen_type) < 0) return NULL;
 
     PyExc_FlvError = PyErr_NewException("flvscreen.FlvError", NULL, NULL);
     if (PyExc_FlvError != NULL) {
 	PyDict_SetItemString(dict, "FlvError", PyExc_FlvError);
     }
+
+    return module;
 }

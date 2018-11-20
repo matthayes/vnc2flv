@@ -8,9 +8,9 @@
 import sys
 from struct import pack, unpack
 try:
-    from io import StringIO
+    from io import BytesIO
 except ImportError:
-    from io import StringIO
+    from io import BytesIO
 
 
 # return the number of required bits for x.
@@ -51,21 +51,21 @@ def getvalue(fp):
     t = fp.read(1)
     if not t:
         raise EOFError
-    elif t == '\x00':
+    elif t == b'\x00':
         (n,) = unpack('>d', fp.read(8))
         return n
-    elif t == '\x01':
+    elif t == b'\x01':
         return bool(ord(fp.read(1)))
-    elif t == '\x02' or t == '\x04':
+    elif t == b'\x02' or t == b'\x04':
         (n,) = unpack('>H', fp.read(2))
         return fp.read(n)
-    elif t == '\x03':
+    elif t == b'\x03':
         d = {}
         try:
             while 1:
                 (n,) = unpack('>H', fp.read(2))
                 if n == 0:
-                    assert fp.read(1) == '\x09'
+                    assert fp.read(1) == b'\x09'
                     break
                 k = fp.read(n)
                 v = getvalue(fp)
@@ -73,10 +73,10 @@ def getvalue(fp):
         except (error, EOFError):
             pass
         return d
-    elif t == '\x07':
+    elif t == b'\x07':
         (n,) = unpack('>H', fp.read(2))
         return n
-    elif t == '\x08':
+    elif t == b'\x08':
         (n,) = unpack('>L', fp.read(4))
         d = {}
         for _ in range(n):
@@ -85,12 +85,12 @@ def getvalue(fp):
             v = getvalue(fp)
             d[k] = v
         return d
-    elif t == '\x0a':
+    elif t == b'\x0a':
         (n,) = unpack('>L', fp.read(4))
         return [ getvalue(fp) for _ in range(n) ]
-    elif t == '\x0b':
+    elif t == b'\x0b':
         return fp.read(10)
-    elif t == '\x0c':
+    elif t == b'\x0c':
         (n,) = unpack('>L', fp.read(4))
         return fp.read(n)
     else:
@@ -132,7 +132,7 @@ class DataParser(object):
         return unpack('<h', self.read(2))[0]
 
     def readub24(self):
-        return unpack('>L', '\x00'+self.read(3))[0]
+        return unpack('>L', b'\x00'+self.read(3))[0]
 
     def readui32(self):
         return unpack('<L', self.read(4))[0]
@@ -181,7 +181,7 @@ class DataParser(object):
         s = []
         while 1:
             c = self.read(1)
-            if c == '\x00': break
+            if c == b'\x00': break
             s.append(c)
         return str(''.join(s), self.encoding)
 
@@ -201,7 +201,7 @@ class DataWriter(object):
 
     def push(self):
         self.fpstack.append(self.fp)
-        self.fp = StringIO()
+        self.fp = BytesIO()
         return
 
     def pop(self):
@@ -225,7 +225,7 @@ class DataWriter(object):
 
     def writeui8(self, *args):
         for x in args:
-            self.fp.write(chr(x))
+            self.fp.write(chr(x).encode())
         return
     def writesi8(self, *args):
         for x in args:
@@ -287,7 +287,7 @@ class DataWriter(object):
                 # |-----8-bits-----|
                 # |-bpos-|---bits----...
                 # |      |----r----|
-                self.fp.write(chr(self.buff | (x >> (bits-r)))) # r < bits
+                self.fp.write(chr(self.buff | (x >> (bits-r))).encode()) # r < bits
                 self.buff = 0
                 self.bpos = 0
                 bits -= r                      # cut off the upper r bits
@@ -296,7 +296,7 @@ class DataWriter(object):
 
     def finishbits(self):
         if self.bpos:
-            self.fp.write(chr(self.buff))
+            self.fp.write(chr(self.buff).encode())
             self.buff = 0
             self.bpos = 0
         return
@@ -304,9 +304,9 @@ class DataWriter(object):
     # variable length structure
 
     def writestring(self, s):
-        assert '\x00' not in s
+        assert b'\x00' not in s
         self.write(s)
-        self.write('\x00')
+        self.write(b'\x00')
         return
 
     def start_tag(self):
@@ -341,7 +341,7 @@ class FLVParser(DataParser):
         return
 
     def parse_metadata(self, data):
-        fp = StringIO(data)
+        fp = BytesIO(data)
         (k,v) = (getvalue(fp), getvalue(fp))
         if self.debug:
             print('Metadata:', (k,v), file=sys.stderr)
@@ -443,25 +443,28 @@ class FLVWriter(DataWriter):
 
     def write_object(self, obj):
         if isinstance(obj, bool):
-            self.write('\x01'+chr(obj))
+            self.write(b'\x01'+chr(obj).encode())
         elif isinstance(obj, (int, float)):
-            self.write('\x00'+pack('>d', obj))
+            self.write(b'\x00'+pack('>d', obj))
         elif isinstance(obj, str):
             if isinstance(obj, str):
                 obj = obj.encode('utf-8')
             if 65535 < len(obj):
-                self.write('\x0c'+pack('>L', len(obj))+obj)
+                self.write(b'\x0c'+pack('>L', len(obj)))
+                self.write(obj)
             else:
-                self.write('\x02'+pack('>H', len(obj))+obj)
+                self.write(b'\x02'+pack('>H', len(obj)))
+                self.write(obj)
         elif isinstance(obj, list):
-            self.write('\x0a'+pack('>L', len(obj)))
+            self.write(b'\x0a'+pack('>L', len(obj)))
             for x in obj:
                 self.write_object(x)
         elif isinstance(obj, dict):
-            self.write('\x08'+pack('>L', len(obj)))
+            self.write(b'\x08'+pack('>L', len(obj)))
             for (k,v) in obj.items():
                 assert isinstance(k, str)
-                self.write(pack('>H', len(k))+k)
+                self.write(pack('>H', len(k)))
+                self.write(k.encode())
                 self.write_object(v)
         return
 
@@ -469,7 +472,7 @@ class FLVWriter(DataWriter):
         if self.debug:
             print(('write_header: flv_version=%r, audio=%r, video=%r' %
                                  (self.flv_version, self.has_audio, self.has_video)), file=sys.stderr)
-        self.write('FLV%c' % self.flv_version)
+        self.write(b'FLV%c' % self.flv_version)
         self.writebits(5,0)
         self.writebits(1,int(self.has_audio))
         self.writebits(1,0)
@@ -487,7 +490,7 @@ class FLVWriter(DataWriter):
         self.start_tag()
         self.write_object('onMetaData')
         self.write_object(self.metadata)
-        self.write('\x00\x00\x09')
+        self.write(b'\x00\x00\x09')
         self.end_tag(self.TAG_DATA)
         return
 

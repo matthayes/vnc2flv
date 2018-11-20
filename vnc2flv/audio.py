@@ -8,9 +8,9 @@
 import sys
 from struct import pack, unpack
 try:
-    from io import StringIO
+    from io import BytesIO
 except ImportError:
-    from io import StringIO
+    from io import BytesIO
 
 
 ##  MP3Parser
@@ -34,7 +34,7 @@ FLV_RATE = { 5500:0x00, 11025:0x04, 22050:0x0a, 44100:0x0c }
 
 def parse_mp3(fp, debug=0):
     if isinstance(fp, str):
-        fp = StringIO(fp)
+        fp = BytesIO(fp)
     while 1:
         x = fp.read(4)
         if len(x) < 4: break
@@ -177,12 +177,12 @@ class AudioSink(object):
             if stereo:
                 flags |= 1
             totalsamples += nsamples
-            writer.write_audio_frame(t-start+timestamp, chr(flags)+data)
+            writer.write_audio_frame(t-start+timestamp, chr(flags).encode()+data)
         return int(totalsamples*1000.0 / self.rate + .5)
 
 
 if __name__ == "__main__":
-    fp = file(sys.argv[1], 'rb')
+    fp = open(sys.argv[1], 'rb')
     for (nsamples,rate,channels,data) in parse_mp3(fp):
         print((nsamples,rate,channels, len(data)))
     fp.close()

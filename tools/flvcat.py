@@ -20,7 +20,7 @@ def flvcat(outfile, srcfiles,
            force=False, debug=0):
     if not force and os.path.exists(outfile):
         raise IOError('file already exists: %r' % outfile)
-    fout = file(outfile, 'wb')
+    fout = open(outfile, 'wb')
     writer = FLVWriter(fout, has_video=True, has_audio=True, framerate=framerate, debug=debug)
     processor = FLVMovieProcessor(writer=writer, debug=debug)
     for fname in srcfiles:
@@ -29,7 +29,7 @@ def flvcat(outfile, srcfiles,
         if m:
             fname = m.group(1)
             ranges = MultipleRange(m.group(2))
-        fin = file(fname, 'rb')
+        fin = open(fname, 'rb')
         parser = FLVParser(fin)
         audiosink = AudioSink()
         videosink = FLVVideoSink(writer, framerate=framerate, keyframe=keyframe,

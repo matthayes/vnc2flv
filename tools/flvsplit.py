@@ -17,7 +17,7 @@ def flvsplit(outbase, srcfile,
              framerate=12, keyframe=120, blocksize=32,
              duration=sys.maxsize, overlap=0, nameformat='%s-%03d.flv',
              force=False, debug=0):
-    fin = file(srcfile, 'rb')
+    fin = open(srcfile, 'rb')
     parser = FLVParser(fin)
     totaldur = parser.get_duration()
     (_,_,totaldur,_,_) = parser[-1]
@@ -28,7 +28,7 @@ def flvsplit(outbase, srcfile,
         outfile = nameformat % (outbase, i)
         if not force and os.path.exists(outfile):
             raise IOError('file already exists: %r' % outfile)
-        fout = file(outfile, 'wb')
+        fout = open(outfile, 'wb')
         writer = FLVWriter(fout, has_video=True, has_audio=True,
                            framerate=framerate, debug=debug)
         processor = FLVMovieProcessor(writer=writer, debug=debug)

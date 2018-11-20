@@ -16,9 +16,9 @@ from vnc2flv.video import MultipleRange
 def mp3add(srcfile, mp3files, outfile, force=False, debug=0):
     if not force and os.path.exists(outfile):
         raise IOError('file already exists: %r' % outfile)
-    fout = file(outfile, 'wb')
+    fout = open(outfile, 'wb')
     writer = FLVWriter(fout, debug=debug, has_video=True, has_audio=True)
-    fin = file(srcfile, 'rb')
+    fin = open(srcfile, 'rb')
     parser = FLVParser(fin, debug=debug)
     for (i, (tag, _, timestamp, _, _)) in enumerate(parser):
         if tag == 8:
@@ -40,7 +40,7 @@ def mp3add(srcfile, mp3files, outfile, force=False, debug=0):
             fname = m.group(1)
             ranges = MultipleRange(m.group(2))
         audio = AudioSink()
-        fp = file(fname, 'rb')
+        fp = open(fname, 'rb')
         audio.load(fp)
         fp.close()
         if ranges:

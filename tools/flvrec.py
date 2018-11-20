@@ -19,7 +19,7 @@ def flvrec(filename, host='localhost', port=5900,
            blocksize=32, clipping=None,
            cmdline=None,
            debug=0, verbose=1):
-    fp = file(filename, 'wb')
+    fp = open(filename, 'wb')
     if pwdfile:
         pwdcache = PWDFile(pwdfile)
     else:

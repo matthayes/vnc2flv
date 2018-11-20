@@ -14,7 +14,7 @@ from .d3des import decrypt_passwd, generate_response
 
 
 def byte2bit(s):
-    return ''.join([ chr((ord(s[i>>3]) >> (7 - i&7)) & 1) for i in range(len(s)*8) ])
+    return ''.join([ chr((ord(s[i>>3]) >> (7 - i&7)) & 1).encode() for i in range(len(s)*8) ])
 def str2bitmap(data, width, height, rowbytes):
     return ''.join([ byte2bit(data[i*rowbytes:(i+1)*rowbytes])[:width] for i in range(height) ])
 
@@ -47,7 +47,7 @@ class PWDCache(object):
 class PWDFile(object):
 
     def __init__(self, fname):
-        fp = file(fname)
+        fp = open(fname)
         self.p = fp.read().strip()
         fp.close()
         return
@@ -88,12 +88,12 @@ class RFBProxy(object):
         if not self.session_open: return
         if self.debug:
             print('FrameBufferUpdateRequest', file=sys.stderr)
-        self.send('\x03\x01' + pack('>HHHH', *self.clipping))
+        self.send(b'\x03\x01' + pack('>HHHH', *self.clipping))
         return
 
     def open(self):
         self.basetime = int(time.time()*1000)
-        self._curbuf = ''
+        self._curbuf = b''
         (self._length, self._state) = self.init()
         return
 
@@ -118,11 +118,11 @@ class RFBProxy(object):
     def init_1(self, server_version):
         # send: client protocol version
         self.protocol_version = 3
-        if server_version.startswith('RFB 003.007'):
+        if server_version.startswith(b'RFB 003.007'):
             self.protocol_version = 7
-        elif server_version.startswith('RFB 003.008'):
+        elif server_version.startswith(b'RFB 003.008'):
             self.protocol_version = 8
-        self.send('RFB 003.%03d\x0a' % self.protocol_version)
+        self.send(b'RFB 003.%03d\x0a' % self.protocol_version)
         if self.debug:
             print('protocol_version: 3.%d' % self.protocol_version, file=sys.stderr)
         if self.protocol_version == 3:
@@ -141,6 +141,7 @@ class RFBProxy(object):
         raise RFBAuthError('Auth Error: %s' % reason)
 
     def auth3(self):
+        print("auth3")
         # protocol 3.3 (or 3.6)
         # recv: server security
         return (4, self.auth3_1)
@@ -167,17 +168,17 @@ class RFBProxy(object):
         if self.debug:
             print('server_securities: %r' % server_securities, file=sys.stderr)
         # must include None or VNCAuth
-        if '\x01' in server_securities:
+        if b'\x01' in server_securities:
             # None
-            self.send('\x01')
+            self.send(b'\x01')
             if self.protocol_version == 8:
                 # Protocol 3.8: must recv security result
                 return (4, self.auth8_3)
             else:
                 return self.authend(0)
-        elif '\x02' in server_securities:
+        elif b'\x02' in server_securities:
             # VNCAuth
-            self.send('\x02')
+            self.send(b'\x02')
             return self.crauth()
         raise RFBAuthError('Unknown security: %r' % server_securities)
     def auth8_3(self, data):
@@ -215,7 +216,7 @@ class RFBProxy(object):
             raise RFBAuthError('Auth Error: %s' % reason)
         # negotiation ok.
         # send: always shared.
-        self.send('\x01')
+        self.send(b'\x01')
         return self.start()
 
     def start(self):
@@ -236,20 +237,20 @@ class RFBProxy(object):
             print(' rgbmax=', (red_max, green_max, blue_max), file=sys.stderr)
             print(' rgbshift=', (red_shift, green_shift, blue_shift), file=sys.stderr)
         # setformat
-        self.send('\x00\x00\x00\x00')
+        self.send(b'\x00\x00\x00\x00')
         # 32bit, 8bit-depth, big-endian(RGBX), truecolour, 255max
         (bitsperpixel, depth, bigendian, truecolour,
          red_max, green_max, blue_max,
          red_shift, green_shift, blue_shift) = self.preferred_format(bitsperpixel, depth, bigendian, truecolour,
                                                                      red_max, green_max, blue_max,
                                                                      red_shift, green_shift, blue_shift)
-        self.bytesperpixel = bitsperpixel/8
+        self.bytesperpixel = int(bitsperpixel/8)
         pixelformat = pack('>BBBBHHHBBBxxx', bitsperpixel, depth, bigendian, truecolour,
                            red_max, green_max, blue_max,
                            red_shift, green_shift, blue_shift)
         self.send(pixelformat)
         self.clipping = self.sink.init_screen(self.width, self.height, self.name)
-        self.send('\x02\x00' + pack('>H', len(self.preferred_encoding)))
+        self.send(b'\x02\x00' + pack('>H', len(self.preferred_encoding)))
         for e in self.preferred_encoding:
             self.send(pack('>l', e))
         self.session_open = True
@@ -260,18 +261,18 @@ class RFBProxy(object):
         return (1, self.loop_1)
 
     def loop_1(self, c):
-        if c == '\x00':
+        if c == b'\x00':
             # framebuffer update
             return self.framebegin()
-        elif c == '\x01':
+        elif c == b'\x01':
             # change color map
             return self.cmap()
-        elif c == '\x02':
+        elif c == b'\x02':
             # bell
             if self.debug:
                 print('Bell', file=sys.stderr)
             return self.loop()
-        elif c == '\x03':
+        elif c == b'\x03':
             # cut-and-paste
             return self.cutnpaste()
         else:
@@ -393,12 +394,12 @@ class RFBProxy(object):
     def richcursor(self, width, height):
         if width == 0 or height == 0:
             return self.framerect()
-        rowbytes = (width + 7) / 8
+        rowbytes = int((width + 7) / 8)
         return (width*height*self.bytesperpixel + rowbytes*height, self.richcursor_1)
     def richcursor_1(self, data):
         (x,y) = self.rectpos
         (width,height) = self.rectsize
-        rowbytes = (width + 7) / 8
+        rowbytes = int((width + 7) / 8)
         # Cursor image RGB
         n = width*height*self.bytesperpixel
         image = data[:n]
@@ -410,10 +411,10 @@ class RFBProxy(object):
         image = self.sink.convert_pixels(image)
         mask = str2bitmap(mask, w, h, rowbytes)
         def conv1(i):
-            if mask[i/4] == '\x01':
-                return '\xff'+image[i]+image[i+1]+image[i+2]
+            if mask[i/4] == b'\x01':
+                return b'\xff'+image[i]+image[i+1]+image[i+2]
             else:
-                return '\x00\x00\x00\x00'
+                return b'\x00\x00\x00\x00'
         bits = ''.join([ conv1(i) for i in range(0, len(image), 4) ])
         self.sink.update_cursor_image(width, height, bits)
         self.sink.update_cursor_pos(x, y)
@@ -422,12 +423,12 @@ class RFBProxy(object):
     def xcursor(self, width, height):
         if width == 0 or height == 0:
             return self.framerect()
-        rowbytes = (width + 7) / 8
+        rowbytes = int((width + 7) / 8)
         return (3+3+2*rowbytes*height, self.xcursor_1)
     def xcursor_1(self, data):
         (x,y) = self.rectpos
         (width,height) = self.rectsize
-        rowbytes = (width + 7) / 8
+        rowbytes = int((width + 7) / 8)
         # Foreground RGB
         fgcolor = data[:3]
         # Background RGB
@@ -443,13 +444,13 @@ class RFBProxy(object):
         shape = str2bitmap(shape, width, height, rowbytes)
         mask = str2bitmap(mask, width, height, rowbytes)
         def conv1(i):
-            if mask[i] == '\x01':
-                if shape[i] == '\x01':
-                    return '\xff'+fgcolor
+            if mask[i] == b'\x01':
+                if shape[i] == b'\x01':
+                    return b'\xff'+fgcolor
                 else:
-                    return '\xff'+bgcolor
+                    return b'\xff'+bgcolor
             else:
-                return '\x00\x00\x00\x00'
+                return b'\x00\x00\x00\x00'
         bits = ''.join([ conv1(i) for i in range(len(shape)) ])
         self.sink.update_cursor_image(width, height, bits)
         self.sink.update_cursor_pos(x, y)

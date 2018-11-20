@@ -8,9 +8,9 @@
 import sys
 from vnc2flv.flv import FLVParser, getvalue
 try:
-    from io import StringIO
+    from io import BytesIO
 except ImportError:
-    from io import StringIO
+    from io import BytesIO
 from struct import unpack, error
 
 
@@ -47,7 +47,7 @@ def flvdump(fp, verbose=0, debug=0):
         elif tag == 9:
             # Video tag
             ftype = FTYPE.get(ord(data[0]) >> 4, '?')
-            buf = StringIO(data)
+            buf = BytesIO(data)
             codec = ord(buf.read(1)) & 0xf
             cname = CODEC.get(codec, '?')
             video += 1
@@ -113,7 +113,7 @@ def main(argv):
         elif k == '-q': verbose -= 1
     if not args: return usage()
     for fname in args:
-        fp = file(fname, 'rb')
+        fp = open(fname, 'rb')
         flvdump(fp, verbose=verbose, debug=debug)
         fp.close()
     return

@@ -8,9 +8,9 @@
 import sys, zlib, re
 from struct import pack, unpack
 try:
-    from io import StringIO
+    from io import BytesIO
 except ImportError:
-    from io import StringIO
+    from io import BytesIO
 from flvscreen import FlvScreen
 
 
@@ -173,8 +173,8 @@ class FLVVideoSink(VideoSink):
 
     def init_screen(self, width, height, name=None):
         (x,y, width, height) = VideoSink.init_screen(self, width, height, name=name)
-        bw = (width+self.blocksize-1) / self.blocksize
-        bh = (height+self.blocksize-1) / self.blocksize
+        bw = int((width+self.blocksize-1) / self.blocksize)
+        bh = int((height+self.blocksize-1) / self.blocksize)
         self.screenpos = (x,y)
         self.screensize = (bw,bh)
         self.screen = FlvScreen(self.blocksize, bw, bh)
@@ -227,11 +227,11 @@ class FLVVideoSink(VideoSink):
             flags |= 0x10
         else:
             flags |= 0x20
-        data = chr(flags)
+        data = chr(flags).encode()
         w = bw * self.blocksize
         h = bh * self.blocksize
-        data += chr((self.blocksize/16-1) << 4 | w >> 8) + chr(w & 0xff)
-        data += chr((self.blocksize/16-1) << 4 | h >> 8) + chr(h & 0xff)
+        data += chr((int(self.blocksize/16)-1) << 4 | w >> 8).encode() + chr(w & 0xff).encode()
+        data += chr((int(self.blocksize/16)-1) << 4 | h >> 8).encode() + chr(h & 0xff).encode()
         n = 0
         for y in range(bh, 0, -1):
             y = by+y-1
@@ -315,7 +315,7 @@ class FLVMovieProcessor(object):
         vblocks = (imageheight+blockheight-1)/blockheight
         if not videosink.initialized:
             videosink.init_screen(imagewidth, imageheight)
-        fp = StringIO(data[5:])
+        fp = BytesIO(data[5:])
         changed = []
         for y in range(vblocks):
             for x in range(hblocks):
@@ -372,7 +372,7 @@ class FLVMovieProcessor(object):
 if __name__ == '__main__':
     from .flv import FLVWriter
     from .rfb import RFBNetworkClient
-    fp = file('out.flv', 'wb')
+    fp = open('out.flv', 'wb')
     writer = FLVWriter(fp)
     sink = FLVVideoSink(writer, debug=1)
     client = RFBNetworkClient('127.0.0.1', 5900, sink)
